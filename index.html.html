@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Unfurl — paste a link. get a postcard.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=DM+Sans:wght@300;400;500&family=Caveat:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+/* ── THEMES ── */
+:root {
+  --cream: #FDF6EE;
+  --ink: #2a1a1a;
+  --ink-light: #6b4c4c;
+  --border: #e0c8c0;
+}
+
+body.theme-pink {
+  --c1: #F4C0D1;
+  --c2: #D4537E;
+  --c3: #993556;
+  --c4: #FFF0F5;
+  --c5: #3C3489;
+  --c6: #AFA9EC;
+  --accent: #D85A30;
+  --stamp: #993556;
+}
+body.theme-teal {
+  --c1: #9FE1CB;
+  --c2: #1D9E75;
+  --c3: #085041;
+  --c4: #E1F5EE;
+  --c5: #04342C;
+  --c6: #5DCAA5;
+  --accent: #D85A30;
+  --stamp: #085041;
+}
+body.theme-lavender {
+  --c1: #CECBF6;
+  --c2: #7F77DD;
+  --c3: #3C3489;
+  --c4: #EEEDFE;
+  --c5: #26215C;
+  --c6: #AFA9EC;
+  --accent: #D4537E;
+  --stamp: #534AB7;
+}
+body.theme-coral {
+  --c1: #F5C4B3;
+  --c2: #D85A30;
+  --c3: #993C1D;
+  --c4: #FAECE7;
+  --c5: #4A1B0C;
+  --c6: #FAC775;
+  --accent: #7F77DD;
+  --stamp: #993C1D;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* ── CUSTOM CURSOR ── */
+.cursor {
+  width: 14px; height: 14px;
+  position: fixed; top: 0; left: 0;
+  pointer-events: none; z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: transform 0.1s ease;
+}
+.cursor svg { width: 100%; height: 100%; }
+.cursor.hover { transform: translate(-50%, -50%) scale(1.8); }
+
+/* ── NOISE TEXTURE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 1; opacity: 0.4;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 100;
+  padding: 18px 48px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(253,246,238,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px dashed var(--border);
+}
+
+.logo {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 26px;
+  color: var(--c3);
+  text-decoration: none;
+  position: relative;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.logo-star {
+  position: absolute;
+  top: -6px; left: 1px;
+  width: 10px; height: 10px;
+  fill: var(--accent);
+  animation: spin-star 4s linear infinite;
+}
+@keyframes spin-star {
+  0%,100%{transform:scale(1) rotate(0deg)}
+  50%{transform:scale(1.3) rotate(180deg)}
+}
+
+.nav-links {
+  display: flex; align-items: center; gap: 32px;
+  list-style: none;
+}
+.nav-links a {
+  font-size: 14px; color: var(--ink-light);
+  text-decoration: none; letter-spacing: 0.5px;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--c2); }
+
+.nav-cta {
+  background: var(--c3);
+  color: var(--c4) !important;
+  padding: 9px 20px;
+  border-radius: 40px;
+  font-size: 13px !important;
+  letter-spacing: 0.5px;
+  transition: transform 0.2s, background 0.2s !important;
+}
+.nav-cta:hover { transform: scale(1.04); background: var(--c2) !important; }
+
+/* ── THEME SWITCHER ── */
+.theme-switcher {
+  display: flex; align-items: center; gap: 8px;
+}
+.theme-dot {
+  width: 18px; height: 18px; border-radius: 50%;
+  cursor: none; border: 2px solid transparent;
+  transition: transform 0.2s, border-color 0.2s;
+  position: relative;
+}
+.theme-dot:hover { transform: scale(1.3); }
+.theme-dot.active { border-color: var(--ink); }
+.theme-dot[data-theme="pink"]     { background: #D4537E; }
+.theme-dot[data-theme="teal"]     { background: #1D9E75; }
+.theme-dot[data-theme="lavender"] { background: #7F77DD; }
+.theme-dot[data-theme="coral"]    { background: #D85A30; }
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  padding: 140px 48px 80px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 60px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-bg-doodle {
+  position: absolute;
+  pointer-events: none; z-index: 0;
+}
+
+.hero-left { position: relative; z-index: 2; }
+
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--c2);
+  background: var(--c4);
+  border: 1px dashed var(--c2);
+  padding: 6px 14px; border-radius: 30px;
+  margin-bottom: 24px;
+  font-family: 'DM Sans', sans-serif; font-weight: 500;
+}
+
+.hero-headline {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: clamp(52px, 7vw, 82px);
+  line-height: 1.05;
+  color: var(--c3);
+  margin-bottom: 10px;
+}
+.hero-headline span {
+  color: var(--accent);
+  position: relative;
+  display: inline-block;
+}
+.hero-headline span::after {
+  content: '';
+  position: absolute;
+  bottom: 4px; left: 0; right: 0; height: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  transform-origin: left;
+  animation: underline-draw 1s 0.8s ease forwards;
+  transform: scaleX(0);
+}
+@keyframes underline-draw {
+  to { transform: scaleX(1); }
+}
+
+.hero-sub {
+  font-size: 19px; color: var(--ink-light);
+  font-family: 'Caveat', cursive;
+  margin-bottom: 36px; font-weight: 400;
+  letter-spacing: 0.3px;
+}
+
+.hero-cta-row {
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+}
+
+.btn-primary {
+  background: var(--c3);
+  color: var(--c4);
+  padding: 14px 28px;
+  border-radius: 40px;
+  font-size: 15px; font-weight: 500;
+  text-decoration: none;
+  display: inline-flex; align-items: center; gap: 8px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: none;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+}
+.btn-primary:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.btn-ghost {
+  color: var(--ink-light);
+  font-size: 14px; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px;
+  border-bottom: 1px dashed var(--border);
+  padding-bottom: 2px;
+  font-family: 'Caveat', cursive; font-size: 17px;
+  transition: color 0.2s;
+  cursor: none;
+}
+.btn-ghost:hover { color: var(--c2); }
+
+.hero-note {
+  margin-top: 16px;
+  font-size: 12px; color: var(--ink-light); opacity: 0.7;
+  display: flex; align-items: center; gap: 6px;
+}
+
+/* ── POSTCARDS IN HERO ── */
+.hero-right {
+  position: relative; z-index: 2;
+  height: 480px;
+}
+
+.postcard {
+  position: absolute;
+  width: 320px;
+  background: var(--c4);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  cursor: none;
+}
+.postcard:hover {
+  transform: var(--hover-transform) !important;
+  box-shadow: 0 20px 48px rgba(0,0,0,0.15) !important;
+  z-index: 10;
+}
+
+/* postcard stamp border effect */
+.postcard::before {
+  content: '';
+  position: absolute; inset: 0;
+  border: 2px dashed var(--c1);
+  border-radius: 10px;
+  pointer-events: none; z-index: 5;
+}
+
+.pc-front { --hover-transform: rotate(-3deg) translateY(-8px); }
+.pc-back  { --hover-transform: rotate(3deg)  translateY(-8px); }
+
+.pc1 {
+  top: 20px; left: 20px;
+  transform: rotate(-5deg);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+}
+.pc2 {
+  top: 80px; left: 120px;
+  transform: rotate(3deg);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+}
+
+.pc-img {
+  width: 100%; height: 160px;
+  object-fit: cover;
+  background: var(--c1);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: 13px; font-style: italic;
+  color: var(--c3); letter-spacing: 1px;
+  text-transform: uppercase; gap: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.pc-img-oval {
+  position: absolute;
+  width: 200px; height: 110px;
+  border-radius: 50%;
+  border: 2px solid var(--c2);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-style: italic; font-size: 22px;
+  color: var(--c3);
+}
+
+.pc-body {
+  padding: 14px 16px 16px;
+}
+.pc-domain {
+  font-size: 10px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--c2);
+  font-weight: 500; margin-bottom: 4px;
+}
+.pc-title {
+  font-family: 'Playfair Display', serif;
+  font-style: italic; font-size: 16px;
+  color: var(--ink); line-height: 1.3;
+  margin-bottom: 8px;
+}
+.pc-desc {
+  font-size: 12px; color: var(--ink-light);
+  font-family: 'Caveat', cursive; line-height: 1.4;
+  margin-bottom: 10px;
+}
+.pc-palette {
+  display: flex; gap: 5px; margin-bottom: 10px;
+}
+.pc-dot { width: 14px; height: 14px; border-radius: 50%; }
+.pc-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  border-top: 1px dashed var(--border); padding-top: 8px;
+}
+.pc-url { font-size: 10px; color: var(--ink-light); letter-spacing: 0.5px; }
+.pc-logo {
+  font-family: 'Playfair Display', serif;
+  font-style: italic; font-size: 11px;
+  color: var(--c2); opacity: 0.7;
+}
+
+/* back of card */
+.pc-back-layout {
+  display: grid; grid-template-columns: 1fr 1px 1fr;
+  gap: 0; padding: 16px;
+}
+.pc-back-divider { background: var(--border); }
+.pc-back-left { padding-right: 12px; }
+.pc-back-right { padding-left: 12px; }
+.pc-back-label {
+  font-size: 11px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--c2);
+  font-weight: 500; margin-bottom: 10px;
+}
+.pc-back-msg {
+  font-family: 'Caveat', cursive;
+  font-size: 14px; color: var(--ink);
+  line-height: 1.5;
+}
+.pc-stamp-box {
+  width: 52px; height: 62px;
+  border: 1.5px solid var(--stamp);
+  border-radius: 3px;
+  margin-left: auto; margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--c4);
+  font-size: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.pc-stamp-box::before {
+  content: '';
+  position: absolute; inset: 2px;
+  border: 1px dashed var(--stamp); border-radius: 2px; opacity: 0.4;
+}
+.pc-postmark {
+  width: 50px; height: 50px;
+  border-radius: 50%;
+  border: 1.5px solid var(--c2);
+  margin: 0 auto 8px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 1px;
+}
+.pc-postmark span {
+  font-size: 7px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--c2);
+  font-weight: 500;
+}
+.pc-address-lines { margin-top: 10px; }
+.pc-address-lines div {
+  height: 1px; background: var(--border);
+  margin-bottom: 8px;
+}
+
+/* ── SECTION BASE ── */
+section {
+  padding: 100px 48px;
+  position: relative;
+}
+
+.section-eyebrow {
+  font-size: 11px; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--c2);
+  font-weight: 500; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 10px;
+}
+.section-eyebrow::before {
+  content: '';
+  width: 20px; height: 1px; background: var(--c2);
+}
+
+.section-title {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: clamp(32px, 4vw, 48px);
+  line-height: 1.2; color: var(--c3);
+  margin-bottom: 14px;
+}
+.section-sub {
+  font-size: 17px; color: var(--ink-light);
+  max-width: 500px; line-height: 1.6;
+  margin-bottom: 56px;
+}
+
+/* ── HOW IT WORKS — corkboard ── */
+.how-section {
+  background: #f5ede3;
+  border-top: 1px dashed var(--border);
+  border-bottom: 1px dashed var(--border);
+}
+
+.corkboard {
+  background: #c4935a;
+  border-radius: 12px;
+  padding: 40px 40px 50px;
+  position: relative;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.08);
+}
+.corkboard::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(0,0,0,0.02) 0px, rgba(0,0,0,0.02) 1px, transparent 1px, transparent 8px),
+    repeating-linear-gradient(-45deg, rgba(0,0,0,0.02) 0px, rgba(0,0,0,0.02) 1px, transparent 1px, transparent 8px);
+  border-radius: 12px; pointer-events: none;
+}
+
+.steps-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 32px; position: relative; z-index: 2;
+}
+
+.step-card {
+  background: var(--c4);
+  border-radius: 8px;
+  padding: 24px;
+  position: relative;
+  transition: transform 0.3s ease;
+  cursor: none;
+}
+.step-card:hover { transform: rotate(0deg) translateY(-6px) !important; }
+.step-card:nth-child(1) { transform: rotate(-2deg); }
+.step-card:nth-child(2) { transform: rotate(1deg); margin-top: 20px; }
+.step-card:nth-child(3) { transform: rotate(-1.5deg); }
+
+/* pushpin */
+.step-card::before {
+  content: '';
+  position: absolute; top: -10px; left: 50%;
+  transform: translateX(-50%);
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  z-index: 3;
+}
+
+.step-number {
+  font-family: 'Playfair Display', serif;
+  font-style: italic; font-size: 48px;
+  color: var(--c1); font-weight: 700;
+  line-height: 1; margin-bottom: 10px;
+}
+.step-title {
+  font-family: 'Playfair Display', serif;
+  font-style: italic; font-size: 22px;
+  color: var(--c3); margin-bottom: 8px;
+}
+.step-desc {
+  font-size: 14px; color: var(--ink-light); line-height: 1.6;
+  font-family: 'Caveat', cursive; font-size: 15px;
+}
+
+/* ── EXAMPLES ── */
+.examples-section { overflow: hidden; }
+
+.examples-scroll-wrap {
+  overflow-x: auto;
+  padding-bottom: 20px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--c1) transparent;
+  margin: 0 -48px;
+  padding: 0 48px 20px;
+}
+.examples-scroll {
+  display: flex; gap: 24px;
+  width: max-content;
+}
+
+.example-card {
+  width: 240px; flex-shrink: 0;
+  background: var(--c4);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px dashed var(--c1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: none;
+}
+.example-card:hover {
+  transform: translateY(-8px) rotate(1deg);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+}
+.example-card:nth-child(even) { margin-top: 24px; }
+
+.ex-img {
+  height: 120px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+  font-family: 'Playfair Display', serif;
+  font-style: italic; font-size: 14px;
+  color: white; letter-spacing: 1px;
+}
+.ex-body { padding: 12px 14px; }
+.ex-domain {
+  font-size: 9px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--c2);
+  margin-bottom: 4px; font-weight: 500;
+}
+.ex-title {
+  font-family: 'Playfair Display', serif;
+  font-style: italic; font-size: 14px;
+  color: var(--ink); line-height: 1.3; margin-bottom: 6px;
+}
+.ex-desc {
+  font-family: 'Caveat', cursive;
+  font-size: 12px; color: var(--ink-light); line-height: 1.4;
+}
+.ex-palette { display: flex; gap: 4px; margin-top: 8px; }
+.ex-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+/* ── WHY UNFURL ── */
+.why-section {
+  background: var(--c4);
+  border-top: 1px dashed var(--border);
+  border-bottom: 1px dashed var(--border);
+}
+
+.compare-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.compare-card {
+  border-radius: 10px; overflow: hidden;
+  border: 1.5px solid var(--c1);
+  transition: transform 0.3s;
+  cursor: none;
+}
+.compare-card:hover { transform: translateY(-6px); }
+
+.compare-before {
+  background: #f0ebe4;
+  padding: 20px;
+  border-bottom: 1px dashed var(--border);
+}
+.compare-before-label {
+  font-size: 10px; letter-spacing: 2px;
+  text-transform: uppercase; color: #aaa;
+  margin-bottom: 8px; font-weight: 500;
+}
+.compare-before-url {
+  font-family: 'DM Sans', monospace;
+  font-size: 12px; color: #888;
+  word-break: break-all; line-height: 1.5;
+}
+
+.compare-after {
+  background: var(--c4);
+  padding: 20px;
+}
+.compare-after-label {
+  font-size: 10px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--c2);
+  margin-bottom: 10px; font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+}
+.compare-card-mini {
+  background: var(--c1);
+  border-radius: 6px; padding: 12px;
+  opacity: 0.9;
+}
+.compare-card-mini .mini-title {
+  font-family: 'Playfair Display', serif;
+  font-style: italic; font-size: 13px;
+  color: var(--c3); margin-bottom: 4px;
+}
+.compare-card-mini .mini-desc {
+  font-family: 'Caveat', cursive;
+  font-size: 12px; color: var(--c3);
+  opacity: 0.8; line-height: 1.3;
+}
+
+/* ── PRICING ── */
+.pricing-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 24px; max-width: 700px; margin: 0 auto;
+}
+
+.price-card {
+  background: var(--c4);
+  border: 1.5px dashed var(--c1);
+  border-radius: 12px;
+  padding: 36px 32px;
+  position: relative;
+  transition: transform 0.3s;
+  cursor: none;
+}
+.price-card:hover { transform: translateY(-6px); }
+.price-card.featured {
+  border-color: var(--c2);
+  border-width: 2px;
+  background: var(--c3);
+  color: var(--c4);
+}
+.price-card.featured .price-name,
+.price-card.featured .price-amount,
+.price-card.featured .price-desc,
+.price-card.featured .price-feature { color: var(--c4) !important; opacity: 0.9; }
+.price-card.featured .price-feature { opacity: 0.8; }
+
+.price-badge {
+  position: absolute; top: -14px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: white; font-size: 11px;
+  padding: 4px 14px; border-radius: 20px;
+  letter-spacing: 1px; font-weight: 500;
+}
+
+.price-name {
+  font-family: 'Playfair Display', serif;
+  font-style: italic; font-size: 22px;
+  color: var(--c3); margin-bottom: 8px;
+}
+.price-amount {
+  font-size: 40px; font-weight: 300;
+  color: var(--c2); line-height: 1;
+  margin-bottom: 4px;
+}
+.price-amount sup { font-size: 18px; vertical-align: top; margin-top: 6px; display: inline-block; }
+.price-amount sub { font-size: 14px; color: var(--ink-light); }
+.price-desc {
+  font-size: 13px; color: var(--ink-light);
+  margin-bottom: 24px; font-family: 'Caveat', cursive;
+  font-size: 15px;
+}
+.price-features { list-style: none; margin-bottom: 28px; }
+.price-feature {
+  font-size: 13px; color: var(--ink-light);
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--border);
+  display: flex; align-items: center; gap: 8px;
+}
+.price-feature::before { content: '✦'; color: var(--c2); font-size: 10px; }
+.price-btn {
+  width: 100%; padding: 12px;
+  border-radius: 30px; border: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 500;
+  cursor: none; transition: transform 0.2s;
+  letter-spacing: 0.5px;
+}
+.price-btn:hover { transform: scale(1.03); }
+.price-btn-outline {
+  background: transparent;
+  border: 1.5px solid var(--c2);
+  color: var(--c2);
+}
+.price-btn-fill {
+  background: var(--accent);
+  color: white;
+}
+
+/* ── FOOTER ── */
+footer {
+  padding: 48px;
+  border-top: 1px dashed var(--border);
+  display: flex; align-items: center;
+  justify-content: space-between; flex-wrap: wrap; gap: 20px;
+}
+
+.footer-logo {
+  font-family: 'Playfair Display', serif;
+  font-style: italic; font-size: 22px;
+  color: var(--c3);
+}
+
+.footer-note {
+  font-family: 'Caveat', cursive;
+  font-size: 18px; color: var(--ink-light);
+  display: flex; align-items: center; gap: 6px;
+}
+
+.footer-star { color: var(--c2); animation: pulse-star 2s ease-in-out infinite; }
+@keyframes pulse-star {
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.4) rotate(20deg)}
+}
+
+.footer-links {
+  display: flex; gap: 24px; list-style: none;
+}
+.footer-links a {
+  font-size: 13px; color: var(--ink-light);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.footer-links a:hover { color: var(--c2); }
+
+/* ── SPARKLE PARTICLES ── */
+.sparkle-particle {
+  position: fixed;
+  pointer-events: none; z-index: 9998;
+  width: 8px; height: 8px;
+  animation: sparkle-fly 0.6s ease forwards;
+}
+@keyframes sparkle-fly {
+  0%   { transform: translate(0,0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+}
+
+/* ── FADE IN ── */
+.fade-in {
+  opacity: 0; transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.fade-in.visible { opacity: 1; transform: translateY(0); }
+
+/* ── SCROLL HINT ── */
+.scroll-hint {
+  position: absolute; bottom: 32px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column;
+  align-items: center; gap: 6px;
+  font-size: 11px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--ink-light);
+  opacity: 0.5; animation: bounce-hint 2s ease-in-out infinite;
+}
+@keyframes bounce-hint {
+  0%,100%{transform:translateX(-50%) translateY(0)}
+  50%{transform:translateX(-50%) translateY(6px)}
+}
+
+/* doodle SVGs */
+.doodle { position: absolute; pointer-events: none; }
+
+@media(max-width:860px){
+  .hero{grid-template-columns:1fr;padding:120px 24px 60px}
+  .hero-right{height:300px}
+  .steps-grid,.compare-grid,.pricing-grid{grid-template-columns:1fr}
+  nav{padding:16px 24px}
+  section{padding:70px 24px}
+  footer{padding:32px 24px}
+  .nav-links{display:none}
+}
+</style>
+</head>
+<body class="theme-pink">
+
+<!-- Custom cursor -->
+<div class="cursor" id="cursor">
+  <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M7 0 C7.8 3 11 3.2 14 7 C11 7.8 7.8 11 7 14 C6.2 11 3 7.8 0 7 C3 6.2 6.2 3 7 0Z" fill="var(--c2)"/>
+  </svg>
+</div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="logo">
+    <svg class="logo-star" viewBox="0 0 10 10"><path d="M5 0C5.6 2.2 7.8 2.4 10 5 7.8 5.6 5.6 7.8 5 10 4.4 7.8 2.2 5.6 0 5 2.2 4.4 4.4 2.2 5 0Z"/></svg>
+    unfurl
+  </a>
+  <ul class="nav-links">
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#examples">Examples</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="#" class="nav-cta">Add to Chrome</a></li>
+  </ul>
+  <div class="theme-switcher">
+    <div class="theme-dot active" data-theme="pink" title="Rose"></div>
+    <div class="theme-dot" data-theme="teal" title="Sage"></div>
+    <div class="theme-dot" data-theme="lavender" title="Dusk"></div>
+    <div class="theme-dot" data-theme="coral" title="Ember"></div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+
+  <!-- background doodles -->
+  <svg class="hero-bg-doodle" style="top:100px;right:40px;width:80px;opacity:0.18" viewBox="0 0 80 80">
+    <line x1="40" y1="5" x2="40" y2="75" stroke="var(--c2)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="5" y1="40" x2="75" y2="40" stroke="var(--c2)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="16" y1="16" x2="64" y2="64" stroke="var(--c2)" stroke-width="1" stroke-linecap="round"/>
+    <line x1="64" y1="16" x2="16" y2="64" stroke="var(--c2)" stroke-width="1" stroke-linecap="round"/>
+    <circle cx="40" cy="40" r="4" fill="var(--c2)"/>
+  </svg>
+
+  <svg class="hero-bg-doodle" style="bottom:120px;left:30px;width:60px;opacity:0.15" viewBox="0 0 60 60">
+    <path d="M30 2C32 14 46 14 58 30 46 32 32 46 30 58 28 46 14 32 2 30 14 28 28 14 30 2Z" fill="var(--accent)"/>
+  </svg>
+
+  <svg class="hero-bg-doodle" style="top:180px;left:calc(50% - 20px);width:40px;opacity:0.2" viewBox="0 0 40 40">
+    <path d="M2 20 Q10 18 18 20 Q26 22 34 20 Q38 18 40 20" fill="none" stroke="var(--c2)" stroke-width="2" stroke-linecap="round"/>
+    <path d="M2 28 Q10 26 18 28 Q26 30 34 28 Q38 26 40 28" fill="none" stroke="var(--c2)" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+
+  <div class="hero-left fade-in">
+    <div class="eyebrow">
+      <svg width="8" height="8" viewBox="0 0 8 8"><path d="M4 0C4.5 1.8 6.2 1.8 8 4 6.2 4.5 4.5 6.2 4 8 3.5 6.2 1.8 4.5 0 4 1.8 3.5 3.5 1.8 4 0Z" fill="var(--c2)"/></svg>
+      Chrome Extension — Free forever
+    </div>
+    <h1 class="hero-headline">
+      Every link,<br/><span>a postcard.</span>
+    </h1>
+    <p class="hero-sub">paste a link. get something beautiful.</p>
+    <div class="hero-cta-row">
+      <a href="#" class="btn-primary">
+        <svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 0C7.8 2.8 11.2 2.8 14 7 11.2 7.8 7.8 11.2 7 14 6.2 11.2 2.8 7.8 0 7 2.8 6.2 6.2 2.8 7 0Z" fill="currentColor"/></svg>
+        Add to Chrome — it's free
+      </a>
+      <a href="#how" class="btn-ghost">see how it works →</a>
+    </div>
+    <p class="hero-note">
+      <svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 0C6.6 2.4 9.6 2.4 12 6 9.6 6.6 6.6 9.6 6 12 5.4 9.6 2.4 6.6 0 6 2.4 5.4 5.4 2.4 6 0Z" fill="var(--c2)"/></svg>
+      No account needed. No credit card. Works on Chrome.
+    </p>
+  </div>
+
+  <div class="hero-right fade-in" style="transition-delay:0.2s">
+    <!-- Card 1: Front -->
+    <div class="postcard pc-front pc1">
+      <div class="pc-img" style="background:var(--c1)">
+        <div class="pc-img-oval">Notion</div>
+      </div>
+      <div class="pc-body">
+        <div class="pc-domain">notion.so</div>
+        <div class="pc-title">Your connected workspace for notes, docs & projects</div>
+        <div class="pc-palette">
+          <div class="pc-dot" style="background:#000"></div>
+          <div class="pc-dot" style="background:#fff;border:1px solid #ddd"></div>
+          <div class="pc-dot" style="background:#e9e5e0"></div>
+        </div>
+        <div class="pc-footer">
+          <span class="pc-url">notion.so</span>
+          <span class="pc-logo">✦ unfurl</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Back style -->
+    <div class="postcard pc-back pc2">
+      <div style="background:var(--c1);padding:10px 14px;border-bottom:1px dashed var(--border)">
+        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--c3);font-weight:500">POSTCARD</div>
+      </div>
+      <div class="pc-back-layout">
+        <div class="pc-back-left">
+          <div class="pc-back-label">from github.com</div>
+          <div class="pc-back-msg">Where the world builds software — collaborate, ship, and explore millions of open source projects.</div>
+          <div style="margin-top:12px;display:flex;gap:4px">
+            <div style="width:10px;height:10px;border-radius:50%;background:#333"></div>
+            <div style="width:10px;height:10px;border-radius:50%;background:#f5f5f5;border:1px solid #ddd"></div>
+            <div style="width:10px;height:10px;border-radius:50%;background:#0366d6"></div>
+          </div>
+        </div>
+        <div class="pc-back-divider"></div>
+        <div class="pc-back-right">
+          <div class="pc-stamp-box">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="var(--c3)"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.4.6.11.82-.26.82-.58v-2.03c-3.34.72-4.04-1.61-4.04-1.61-.54-1.38-1.33-1.75-1.33-1.75-1.09-.74.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49 1 .1-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1.01-.32 3.3 1.23A11.5 11.5 0 0112 5.8c1.02 0 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.8 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.83.58C20.57 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg>
+          </div>
+          <div class="pc-postmark">
+            <span>UNFURL</span>
+            <span>2025</span>
+          </div>
+          <div class="pc-address-lines">
+            <div></div><div></div><div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll-hint">
+    <span>scroll</span>
+    <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
+      <path d="M1 1L8 8L15 1" stroke="var(--ink-light)" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how">
+  <div class="section-eyebrow fade-in">How it works</div>
+  <h2 class="section-title fade-in">Three steps.<br/>One beautiful card.</h2>
+  <p class="section-sub fade-in">No setup. No account. Just paste and go.</p>
+
+  <div class="corkboard fade-in">
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-number">01</div>
+        <div class="step-title">Paste</div>
+        <div class="step-desc">Click the Unfurl icon in your Chrome toolbar. Drop any link into the box. Your blog post, that GitHub repo, the Notion doc you keep sharing.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">02</div>
+        <div class="step-title">Unfurl</div>
+        <div class="step-desc">AI reads the page, writes a beautiful one-line description, and picks the perfect color palette. The card appears in seconds.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">03</div>
+        <div class="step-title">Share</div>
+        <div class="step-desc">Download as PNG, copy to clipboard, or drop straight into Notion. Your link is now something worth looking at.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EXAMPLES -->
+<section class="examples-section" id="examples">
+  <div class="section-eyebrow fade-in">Real cards</div>
+  <h2 class="section-title fade-in">Every link has<br/>a story to tell.</h2>
+  <p class="section-sub fade-in">See what Unfurl does to the links you share every day.</p>
+
+  <div class="examples-scroll-wrap fade-in">
+    <div class="examples-scroll">
+
+      <div class="example-card">
+        <div class="ex-img" style="background:var(--c2)">notion.so</div>
+        <div class="ex-body">
+          <div class="ex-domain">notion.so</div>
+          <div class="ex-title">Your connected workspace</div>
+          <div class="ex-desc">Where ideas become projects and projects become done.</div>
+          <div class="ex-palette">
+            <div class="ex-dot" style="background:#000"></div>
+            <div class="ex-dot" style="background:#e9e5e0"></div>
+            <div class="ex-dot" style="background:#fff;border:1px solid #ddd"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="example-card">
+        <div class="ex-img" style="background:#1a1a2e;color:#e2e8f0">github.com</div>
+        <div class="ex-body">
+          <div class="ex-domain">github.com</div>
+          <div class="ex-title">Where the world builds software</div>
+          <div class="ex-desc">Millions of developers building together, openly.</div>
+          <div class="ex-palette">
+            <div class="ex-dot" style="background:#333"></div>
+            <div class="ex-dot" style="background:#f5f5f5;border:1px solid #ddd"></div>
+            <div class="ex-dot" style="background:#0366d6"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="example-card">
+        <div class="ex-img" style="background:#ff0000;color:white">youtube.com</div>
+        <div class="ex-body">
+          <div class="ex-domain">youtube.com</div>
+          <div class="ex-title">Enjoy the videos and music you love</div>
+          <div class="ex-desc">A world of stories, waiting for you to press play.</div>
+          <div class="ex-palette">
+            <div class="ex-dot" style="background:#ff0000"></div>
+            <div class="ex-dot" style="background:#282828"></div>
+            <div class="ex-dot" style="background:#f9f9f9;border:1px solid #ddd"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="example-card">
+        <div class="ex-img" style="background:#1da1f2;color:white">twitter.com</div>
+        <div class="ex-body">
+          <div class="ex-domain">twitter.com</div>
+          <div class="ex-title">It's what's happening right now</div>
+          <div class="ex-desc">Every thought, every moment, every breaking story.</div>
+          <div class="ex-palette">
+            <div class="ex-dot" style="background:#1da1f2"></div>
+            <div class="ex-dot" style="background:#14171a"></div>
+            <div class="ex-dot" style="background:#f7f9f9;border:1px solid #ddd"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="example-card">
+        <div class="ex-img" style="background:#ff6719;color:white">substack.com</div>
+        <div class="ex-body">
+          <div class="ex-domain">substack.com</div>
+          <div class="ex-title">A place for independent writing</div>
+          <div class="ex-desc">Words worth subscribing to, delivered to your inbox.</div>
+          <div class="ex-palette">
+            <div class="ex-dot" style="background:#ff6719"></div>
+            <div class="ex-dot" style="background:#1a1a1a"></div>
+            <div class="ex-dot" style="background:#fff5f0"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="example-card">
+        <div class="ex-img" style="background:var(--c1)">recipe blog</div>
+        <div class="ex-body">
+          <div class="ex-domain">smittenkitchen.com</div>
+          <div class="ex-title">Brown Butter Chocolate Chip Cookies</div>
+          <div class="ex-desc">The only cookie recipe you'll ever need again.</div>
+          <div class="ex-palette">
+            <div class="ex-dot" style="background:#8B4513"></div>
+            <div class="ex-dot" style="background:#f5e6d3"></div>
+            <div class="ex-dot" style="background:#2c1810"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- WHY UNFURL -->
+<section class="why-section">
+  <div class="section-eyebrow fade-in">Why Unfurl</div>
+  <h2 class="section-title fade-in">Your links deserve<br/>better than plain text.</h2>
+  <p class="section-sub fade-in">Here's what changes when you Unfurl.</p>
+
+  <div class="compare-grid fade-in">
+
+    <div class="compare-card">
+      <div class="compare-before">
+        <div class="compare-before-label">before</div>
+        <div class="compare-before-url">https://www.notion.so/help/guides/getting-started-with-notion</div>
+      </div>
+      <div class="compare-after">
+        <div class="compare-after-label">
+          <svg width="8" height="8" viewBox="0 0 8 8"><path d="M4 0C4.5 1.8 6.2 1.8 8 4 6.2 4.5 4.5 6.2 4 8 3.5 6.2 1.8 4.5 0 4 1.8 3.5 3.5 1.8 4 0Z" fill="var(--c2)"/></svg>
+          after unfurl
+        </div>
+        <div class="compare-card-mini">
+          <div class="mini-title">Getting Started with Notion</div>
+          <div class="mini-desc">The definitive guide to building your second brain.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="compare-card">
+      <div class="compare-before">
+        <div class="compare-before-label">before</div>
+        <div class="compare-before-url">https://github.com/vercel/next.js/blob/canary/packages/next/README.md</div>
+      </div>
+      <div class="compare-after">
+        <div class="compare-after-label">
+          <svg width="8" height="8" viewBox="0 0 8 8"><path d="M4 0C4.5 1.8 6.2 1.8 8 4 6.2 4.5 4.5 6.2 4 8 3.5 6.2 1.8 4.5 0 4 1.8 3.5 3.5 1.8 4 0Z" fill="var(--c2)"/></svg>
+          after unfurl
+        </div>
+        <div class="compare-card-mini">
+          <div class="mini-title">Next.js — The React Framework</div>
+          <div class="mini-desc">Production-grade React with the best developer experience.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="compare-card">
+      <div class="compare-before">
+        <div class="compare-before-label">before</div>
+        <div class="compare-before-url">https://smittenkitchen.com/2022/08/brown-butter-chocolate-chip-cookies/</div>
+      </div>
+      <div class="compare-after">
+        <div class="compare-after-label">
+          <svg width="8" height="8" viewBox="0 0 8 8"><path d="M4 0C4.5 1.8 6.2 1.8 8 4 6.2 4.5 4.5 6.2 4 8 3.5 6.2 1.8 4.5 0 4 1.8 3.5 3.5 1.8 4 0Z" fill="var(--c2)"/></svg>
+          after unfurl
+        </div>
+        <div class="compare-card-mini">
+          <div class="mini-title">Brown Butter Choc Chip Cookies</div>
+          <div class="mini-desc">The cookie recipe that ends the search for the cookie recipe.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="section-eyebrow fade-in">Pricing</div>
+  <h2 class="section-title fade-in" style="text-align:center">Two plans.<br/>No nonsense.</h2>
+  <p class="section-sub fade-in" style="margin:0 auto 56px;text-align:center">Free forever for casual use. Pro when you're ready.</p>
+
+  <div class="pricing-grid fade-in">
+
+    <div class="price-card">
+      <div class="price-name">Free</div>
+      <div class="price-amount"><sup></sup>₹0<sub>/forever</sub></div>
+      <div class="price-desc">Enough to fall in love with it.</div>
+      <ul class="price-features">
+        <li class="price-feature">20 cards per month</li>
+        <li class="price-feature">3 color themes</li>
+        <li class="price-feature">Download as PNG</li>
+        <li class="price-feature">Copy to clipboard</li>
+        <li class="price-feature">"Made with Unfurl" watermark</li>
+      </ul>
+      <button class="price-btn price-btn-outline">Get started free</button>
+    </div>
+
+    <div class="price-card featured">
+      <div class="price-badge">Most loved ✦</div>
+      <div class="price-name">Pro</div>
+      <div class="price-amount"><sup>₹</sup>299<sub>/mo</sub></div>
+      <div class="price-desc">For people who share links every day.</div>
+      <ul class="price-features">
+        <li class="price-feature">Unlimited cards</li>
+        <li class="price-feature">All color themes + custom</li>
+        <li class="price-feature">Card front + back (postcard mode)</li>
+        <li class="price-feature">Open in Notion integration</li>
+        <li class="price-feature">No watermark</li>
+        <li class="price-feature">Custom fonts on card</li>
+      </ul>
+      <button class="price-btn price-btn-fill">Get Pro ✦</button>
+    </div>
+
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">unfurl</div>
+  <div class="footer-note">
+    Made with <span class="footer-star">✦</span> and too many open tabs.
+  </div>
+  <ul class="footer-links">
+    <li><a href="#">Privacy</a></li>
+    <li><a href="#">Terms</a></li>
+    <li><a href="#">Contact</a></li>
+  </ul>
+</footer>
+
+<script>
+// ── THEME SWITCHER ──
+const dots = document.querySelectorAll('.theme-dot');
+const body = document.body;
+dots.forEach(dot => {
+  dot.addEventListener('click', () => {
+    dots.forEach(d => d.classList.remove('active'));
+    dot.classList.add('active');
+    body.className = 'theme-' + dot.dataset.theme;
+  });
+});
+
+// ── CUSTOM CURSOR ──
+const cursor = document.getElementById('cursor');
+let mx = 0, my = 0, cx = 0, cy = 0;
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+(function animCursor(){
+  cx += (mx - cx) * 0.18;
+  cy += (my - cy) * 0.18;
+  cursor.style.left = cx + 'px';
+  cursor.style.top  = cy + 'px';
+  requestAnimationFrame(animCursor);
+})();
+
+const hoverEls = document.querySelectorAll('a,button,.theme-dot,.example-card,.compare-card,.postcard,.step-card,.price-card');
+hoverEls.forEach(el => {
+  el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+  el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+});
+
+// ── SPARKLE PARTICLES ──
+const COLORS = ['var(--c1)','var(--c2)','var(--accent)','var(--c6)'];
+function spawnSparkles(x, y) {
+  for (let i = 0; i < 3; i++) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    el.setAttribute('viewBox','0 0 8 8');
+    el.setAttribute('width','8'); el.setAttribute('height','8');
+    el.classList.add('sparkle-particle');
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d','M4 0C4.5 1.8 6.2 1.8 8 4 6.2 4.5 4.5 6.2 4 8 3.5 6.2 1.8 4.5 0 4 1.8 3.5 3.5 1.8 4 0Z');
+    path.setAttribute('fill', COLORS[Math.floor(Math.random()*COLORS.length)]);
+    el.appendChild(path);
+    const angle = (i * 120 + Math.random() * 60) * Math.PI / 180;
+    const dist = 20 + Math.random() * 20;
+    el.style.setProperty('--dx', Math.cos(angle)*dist + 'px');
+    el.style.setProperty('--dy', Math.sin(angle)*dist - 10 + 'px');
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 650);
+  }
+}
+let lastSparkle = 0;
+document.addEventListener('mousemove', e => {
+  const now = Date.now();
+  if (now - lastSparkle > 120) {
+    spawnSparkles(e.clientX, e.clientY);
+    lastSparkle = now;
+  }
+});
+
+// ── SCROLL FADE IN ──
+const fadeEls = document.querySelectorAll('.fade-in');
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.12 });
+fadeEls.forEach(el => obs.observe(el));
+
+// trigger hero items immediately
+document.querySelectorAll('.hero .fade-in').forEach(el => {
+  setTimeout(() => el.classList.add('visible'), 100);
+});
+</script>
+</body>
+</html>
